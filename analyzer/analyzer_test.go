@@ -1,7 +1,6 @@
 package analyzer
 
 import (
-	"log"
 	"path/filepath"
 	"testing"
 
@@ -16,9 +15,5 @@ func Test(t *testing.T) {
 		t.Fail()
 	}
 
-	results := analysistest.Run(t, path, Analyzer, "example1")
-
-	for _, r := range results {
-		log.Printf("%#v", r)
-	}
+	_ = analysistest.Run(t, path, Analyzer, "example1", "example2", "example3", "example4", "example5", "example6")
 }

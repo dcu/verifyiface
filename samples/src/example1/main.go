@@ -1,6 +1,6 @@
 package main
 
-type Ok struct {
+type Ok struct { // want `struct Ok doesn't verify interface compliance for Iface`
 }
 
 func (o Ok) Do() error {
@@ -14,7 +14,6 @@ func (o Ok) Do() error {
 // var _ Iface = Ok{}
 
 func main() {
-	// http.Get("")
 }
 
 type Iface interface {

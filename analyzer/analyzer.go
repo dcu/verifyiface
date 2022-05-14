@@ -51,9 +51,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	for _, impl := range implementations {
 		if !impl.verified {
-			f := pass.Fset.Position(impl.ifaceData.pos)
-
-			pass.Reportf(impl.stPos, "struct %s doesn't verify interface compliance for %s (%s)", impl.stName, impl.ifaceData.name, f)
+			pass.Reportf(impl.stPos, "struct %s doesn't verify interface compliance for %s", impl.stName, impl.ifaceData.name)
 		}
 	}
 
@@ -207,7 +205,7 @@ func setInstantiations(pass *analysis.Pass, ifaces []*ifaceData, implementations
 
 						st := getStructFromCompositeLit(pass, vv)
 						for _, v := range implementations {
-							if st == v.st {
+							if st == v.st && v.ifaceData.iface == iface {
 								v.verified = true
 							}
 						}
@@ -216,7 +214,7 @@ func setInstantiations(pass *analysis.Pass, ifaces []*ifaceData, implementations
 
 						st := getStructFromCompositeLit(pass, vv.X)
 						for _, v := range implementations {
-							if st == v.st {
+							if st == v.st && v.ifaceData.iface == iface {
 								v.verified = true
 							}
 						}
@@ -258,7 +256,7 @@ func setInstantiations(pass *analysis.Pass, ifaces []*ifaceData, implementations
 						}
 
 						for _, v := range implementations {
-							if st == v.st {
+							if st == v.st && v.ifaceData.iface == iface {
 								v.verified = true
 							}
 						}
