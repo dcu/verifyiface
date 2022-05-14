@@ -108,7 +108,19 @@ func findAllImplementations(pass *analysis.Pass, ifaces []*ifaceData) []*impl {
 
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch nt := n.(type) {
+			case *ast.File:
+				return true
+			case *ast.TypeSpec:
+				if strings.Contains(nt.Doc.Text(), "#noverifyiface") {
+					return false
+				}
+
+				return true
 			case *ast.GenDecl:
+				if strings.Contains(nt.Doc.Text(), "#noverifyiface") {
+					return false
+				}
+
 				return true
 			case *ast.Ident:
 				t := pass.TypesInfo.ObjectOf(nt)
@@ -136,13 +148,15 @@ func findAllImplementations(pass *analysis.Pass, ifaces []*ifaceData) []*impl {
 							implementations = append(implementations, &impl{t.Type().Underlying().(*types.Struct), iface, false, t.Pos(), t.Name()})
 						}
 					}
+
+					return false
 				default:
 					_ = tt
 					return false
 				}
 			}
 
-			return true
+			return false
 		})
 	}
 
