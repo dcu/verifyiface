@@ -1,6 +1,6 @@
 package main
 
-type Ok struct { // want `struct Ok doesn't verify interface compliance for Iface`
+type Ok struct { // want `struct Ok doesn't verify interface compliance for main.Iface`
 }
 
 func (o Ok) Do() error {

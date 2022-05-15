@@ -12,7 +12,7 @@ type Iface3 interface {
 	Do3() error
 }
 
-type Ok struct { // want `struct Ok doesn't verify interface compliance for Iface3`
+type Ok struct { // want `struct Ok doesn't verify interface compliance for main.Iface3`
 }
 
 func (o Ok) Do1() error {

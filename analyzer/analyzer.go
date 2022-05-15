@@ -42,20 +42,35 @@ type ifaceData struct {
 }
 
 type ifaceVerifier struct {
+	ifaces []*ifaceData
 }
 
 func (c *ifaceVerifier) AFact() {}
 
 func run(pass *analysis.Pass) (interface{}, error) {
+	allIfaces := []*ifaceData{}
 	ifaces := findAllInterfaces(pass)
-	implementations := findAllImplementations(pass, ifaces)
 
-	setInstantiations(pass, ifaces, implementations)
+	allIfaces = append(allIfaces, ifaces...)
+	for _, fact := range pass.AllPackageFacts() {
+		allIfaces = append(allIfaces, fact.Fact.(*ifaceVerifier).ifaces...)
+	}
+
+	printV("found %d local interfaces", len(ifaces))
+	printV("found %d total interfaces", len(allIfaces))
+
+	implementations := findAllImplementations(pass, allIfaces)
+
+	setInstantiations(pass, allIfaces, implementations)
 
 	for _, impl := range implementations {
 		if !impl.verified {
 			pass.Reportf(impl.stPos, "struct %s doesn't verify interface compliance for %s", impl.stName, impl.ifaceData.name)
 		}
+	}
+
+	if len(ifaces) > 0 && pass.Pkg.Name() != "main" {
+		pass.ExportPackageFact(&ifaceVerifier{ifaces})
 	}
 
 	return nil, nil
@@ -84,11 +99,11 @@ func findAllInterfaces(pass *analysis.Pass) []*ifaceData {
 				iface := pass.TypesInfo.TypeOf(ifaceType).(*types.Interface)
 
 				// ignore empty interfaces
-				if len(ifaceType.Methods.List) > 0 {
+				if len(ifaceType.Methods.List) > 0 && nt.Name.IsExported() {
 					printV("found interface %v", nt.Name.Name)
 
 					ifaces = append(ifaces, &ifaceData{
-						name:  nt.Name.Name,
+						name:  pass.Pkg.Name() + "." + nt.Name.Name,
 						iface: iface,
 						pos:   nt.Pos(),
 					})
@@ -150,7 +165,7 @@ func findAllImplementations(pass *analysis.Pass, ifaces []*ifaceData) []*impl {
 
 				switch tt := t.Type().Underlying().(type) {
 				case *types.Struct:
-					printV("verifying struct: %s (%T) %v (%T)", t.Name(), t, tt, tt)
+					printV("verifying struct: %s (%T) %v (%T). %d Interfaces ", t.Name(), t, tt, tt, len(ifaces))
 
 					for _, iface := range ifaces {
 						implemented := types.Implements(t.Type(), iface.iface) || types.Implements(types.NewPointer(t.Type()), iface.iface)
