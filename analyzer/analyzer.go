@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"flag"
 	"go/ast"
 	"go/token"
 	"go/types"
@@ -13,6 +14,18 @@ import (
 )
 
 var (
+	Verbose, StrictCheck bool
+)
+
+func newFlagSet() flag.FlagSet {
+	fs := flag.NewFlagSet("", flag.PanicOnError)
+	fs.BoolVar(&Verbose, "verbose", false, "enable verbose mode")
+	fs.BoolVar(&StrictCheck, "strict", false, "enable strict mode")
+
+	return *fs
+}
+
+var (
 	// Analyzer defines the analyzer for closecheck
 	Analyzer = &analysis.Analyzer{
 		Name:      "verifyiface",
@@ -20,11 +33,10 @@ var (
 		Run:       run,
 		Requires:  []*analysis.Analyzer{inspect.Analyzer},
 		FactTypes: []analysis.Fact{new(ifaceVerifier)},
+		Flags:     newFlagSet(),
 	}
 
 	externalFilesRx = regexp.MustCompile(`(/pkg/mod/|/libexec/|/go-build/)`)
-
-	Verbose, StrictCheck bool
 )
 
 type impl struct {
