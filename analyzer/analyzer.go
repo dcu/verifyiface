@@ -24,7 +24,7 @@ var (
 
 	externalFilesRx = regexp.MustCompile(`(/pkg/mod/|/libexec/|/go-build/)`)
 
-	verbose bool
+	Verbose bool
 )
 
 type impl struct {
@@ -323,7 +323,7 @@ func getStructFromCompositeLit(pass *analysis.Pass, expr ast.Expr) *types.Struct
 }
 
 func printV(format string, args ...interface{}) {
-	if !verbose {
+	if !Verbose {
 		return
 	}
 
@@ -338,7 +338,3 @@ func debug(pass *analysis.Pass, x interface{}) {
 }
 
 var _ = debug
-
-func init() {
-	Analyzer.Flags.BoolVar(&verbose, "verbose", false, "enable verbose mode")
-}

@@ -21,5 +21,7 @@ import (
 )
 
 func main() {
+	analyzer.Analyzer.Flags.BoolVar(&analyzer.Verbose, "verbose", false, "enable verbose mode")
+
 	singlechecker.Main(analyzer.Analyzer)
 }

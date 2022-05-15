@@ -8,7 +8,7 @@ import (
 )
 
 func Test(t *testing.T) {
-	verbose = true
+	Verbose = true
 
 	path, err := filepath.Abs("../samples")
 	if err != nil {
