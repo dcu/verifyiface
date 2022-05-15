@@ -36,14 +36,14 @@ type impl struct {
 }
 
 type ifaceData struct {
-	name         string
+	Name         string
 	iface        *types.Interface
 	pos          token.Pos
 	hasAssertion bool
 }
 
 type ifaceVerifier struct {
-	ifaces []*ifaceData
+	Ifaces []*ifaceData
 }
 
 func (c *ifaceVerifier) AFact() {}
@@ -59,7 +59,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	allIfaces = append(allIfaces, ifaces...)
 	for _, fact := range pass.AllPackageFacts() {
-		allIfaces = append(allIfaces, fact.Fact.(*ifaceVerifier).ifaces...)
+		allIfaces = append(allIfaces, fact.Fact.(*ifaceVerifier).Ifaces...)
 	}
 
 	printV("found %d local interfaces", len(ifaces))
@@ -71,7 +71,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	for _, impl := range implementations {
 		if !impl.verified && (StrictCheck || impl.ifaceData.hasAssertion) {
-			pass.Reportf(impl.stPos, "struct %s doesn't verify interface compliance for %s", impl.stName, impl.ifaceData.name)
+			pass.Reportf(impl.stPos, "struct %s doesn't verify interface compliance for %s", impl.stName, impl.ifaceData.Name)
 		}
 	}
 
@@ -138,7 +138,7 @@ func findAllInterfaces(pass *analysis.Pass) []*ifaceData {
 					printV("found interface %v", nt.Name.Name)
 
 					ifaces = append(ifaces, &ifaceData{
-						name:  pass.Pkg.Name() + "." + nt.Name.Name,
+						Name:  pass.Pkg.Name() + "." + nt.Name.Name,
 						iface: iface,
 						pos:   nt.Pos(),
 					})
@@ -204,7 +204,7 @@ func findAllImplementations(pass *analysis.Pass, ifaces []*ifaceData) []*impl {
 
 					for _, iface := range ifaces {
 						implemented := types.Implements(t.Type(), iface.iface) || types.Implements(types.NewPointer(t.Type()), iface.iface)
-						printV("%v implements %v? %v", t.Name(), iface.name, implemented)
+						printV("%v implements %v? %v", t.Name(), iface.Name, implemented)
 
 						if implemented {
 							implementations = append(implementations, &impl{t.Type().Underlying().(*types.Struct), iface, false, t.Pos(), t.Name()})
