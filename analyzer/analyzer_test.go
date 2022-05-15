@@ -15,5 +15,5 @@ func Test(t *testing.T) {
 		t.Fail()
 	}
 
-	_ = analysistest.Run(t, path, Analyzer, "example1", "example2", "example3", "example4", "example5", "example6", "example7")
+	_ = analysistest.Run(t, path, Analyzer, "example1", "example2", "example3", "example4", "example5", "example6", "example7", "example8")
 }

@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"go/types"
 	"log"
+	"regexp"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -20,6 +21,8 @@ var (
 		Requires:  []*analysis.Analyzer{inspect.Analyzer},
 		FactTypes: []analysis.Fact{new(ifaceVerifier)},
 	}
+
+	externalFilesRx = regexp.MustCompile(`(/pkg/mod/|/libexec/|/go-build/)`)
 
 	verbose bool
 )
@@ -62,6 +65,10 @@ func findAllInterfaces(pass *analysis.Pass) []*ifaceData {
 	ifaces := []*ifaceData{}
 
 	for _, file := range pass.Files {
+		tfile := pass.Fset.File(file.Pos())
+
+		printV("## looking for interfaces in %v", tfile.Name())
+
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch nt := n.(type) {
 			case *ast.File, *ast.GenDecl:
@@ -78,6 +85,8 @@ func findAllInterfaces(pass *analysis.Pass) []*ifaceData {
 
 				// ignore empty interfaces
 				if len(ifaceType.Methods.List) > 0 {
+					printV("found interface %v", nt.Name.Name)
+
 					ifaces = append(ifaces, &ifaceData{
 						name:  nt.Name.Name,
 						iface: iface,
@@ -101,10 +110,12 @@ func findAllImplementations(pass *analysis.Pass, ifaces []*ifaceData) []*impl {
 
 	for _, file := range pass.Files {
 		tfile := pass.Fset.File(file.Pos())
-		if strings.Contains(tfile.Name(), "/libexec/") || strings.Contains(tfile.Name(), "/go-build/") {
-			// ignore std files
+		if externalFilesRx.MatchString(tfile.Name()) {
+			// ignore external files
 			continue
 		}
+
+		printV("## looking for structs in %v", tfile.Name())
 
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch nt := n.(type) {
@@ -139,12 +150,13 @@ func findAllImplementations(pass *analysis.Pass, ifaces []*ifaceData) []*impl {
 
 				switch tt := t.Type().Underlying().(type) {
 				case *types.Struct:
-					for _, iface := range ifaces {
-						if types.Implements(t.Type(), iface.iface) {
-							if verbose {
-								log.Printf(">>>>> %v implements %v", t.Type(), iface)
-							}
+					printV("verifying struct: %s (%T) %v (%T)", t.Name(), t, tt, tt)
 
+					for _, iface := range ifaces {
+						implemented := types.Implements(t.Type(), iface.iface) || types.Implements(types.NewPointer(t.Type()), iface.iface)
+						printV("%v implements %v? %v", t.Name(), iface.name, implemented)
+
+						if implemented {
 							implementations = append(implementations, &impl{t.Type().Underlying().(*types.Struct), iface, false, t.Pos(), t.Name()})
 						}
 					}
@@ -152,6 +164,7 @@ func findAllImplementations(pass *analysis.Pass, ifaces []*ifaceData) []*impl {
 					return false
 				default:
 					_ = tt
+
 					return false
 				}
 			}
@@ -308,6 +321,16 @@ func getStructFromCompositeLit(pass *analysis.Pass, expr ast.Expr) *types.Struct
 
 	return st
 }
+
+func printV(format string, args ...interface{}) {
+	if !verbose {
+		return
+	}
+
+	log.Printf(format, args...)
+}
+
+var _ = printV
 
 func debug(pass *analysis.Pass, x interface{}) {
 	log.Printf("n: %T", x)
