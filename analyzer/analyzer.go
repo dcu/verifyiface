@@ -24,7 +24,7 @@ var (
 
 	externalFilesRx = regexp.MustCompile(`(/pkg/mod/|/libexec/|/go-build/)`)
 
-	Verbose bool
+	Verbose, StrictCheck bool
 )
 
 type impl struct {
@@ -36,9 +36,10 @@ type impl struct {
 }
 
 type ifaceData struct {
-	name  string
-	iface *types.Interface
-	pos   token.Pos
+	name         string
+	iface        *types.Interface
+	pos          token.Pos
+	hasAssertion bool
 }
 
 type ifaceVerifier struct {
@@ -48,8 +49,13 @@ type ifaceVerifier struct {
 func (c *ifaceVerifier) AFact() {}
 
 func run(pass *analysis.Pass) (interface{}, error) {
+	if pass.Pkg.Name() == "fmt" {
+		return nil, nil
+	}
+
 	allIfaces := []*ifaceData{}
 	ifaces := findAllInterfaces(pass)
+	setTypeAssertions(pass, ifaces)
 
 	allIfaces = append(allIfaces, ifaces...)
 	for _, fact := range pass.AllPackageFacts() {
@@ -64,7 +70,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	setInstantiations(pass, allIfaces, implementations)
 
 	for _, impl := range implementations {
-		if !impl.verified {
+		if !impl.verified && (StrictCheck || impl.ifaceData.hasAssertion) {
 			pass.Reportf(impl.stPos, "struct %s doesn't verify interface compliance for %s", impl.stName, impl.ifaceData.name)
 		}
 	}
@@ -74,6 +80,33 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+func setTypeAssertions(pass *analysis.Pass, ifaces []*ifaceData) {
+	for _, file := range pass.Files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			switch nt := n.(type) {
+			case *ast.TypeAssertExpr:
+				assertionType := pass.TypesInfo.TypeOf(nt.Type)
+				if assertionType == nil || assertionType.Underlying() == nil {
+					return false
+				}
+
+				iface, ok := assertionType.Underlying().(*types.Interface)
+				if !ok {
+					return false
+				}
+
+				for _, v := range ifaces {
+					if v.iface == iface {
+						v.hasAssertion = true
+					}
+				}
+			}
+
+			return true
+		})
+	}
 }
 
 func findAllInterfaces(pass *analysis.Pass) []*ifaceData {
@@ -86,7 +119,9 @@ func findAllInterfaces(pass *analysis.Pass) []*ifaceData {
 
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch nt := n.(type) {
-			case *ast.File, *ast.GenDecl:
+			case *ast.File:
+				return true
+			case *ast.GenDecl:
 				return true
 			case *ast.TypeSpec:
 				// debug(pass, n)

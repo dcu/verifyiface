@@ -5,9 +5,9 @@ type Iface interface {
 }
 
 func DoAny(a interface{}) {
-	iface, ok := a.(Iface)
+	iface, assertionWorked := a.(Iface)
 
-	if ok {
+	if assertionWorked {
 		iface.Do()
 	}
 }

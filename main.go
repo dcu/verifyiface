@@ -7,6 +7,7 @@ import (
 
 func main() {
 	analyzer.Analyzer.Flags.BoolVar(&analyzer.Verbose, "verbose", false, "enable verbose mode")
+	analyzer.Analyzer.Flags.BoolVar(&analyzer.StrictCheck, "strict", false, "enable strict mode")
 
 	singlechecker.Main(analyzer.Analyzer)
 }
